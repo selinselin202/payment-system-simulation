@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Secure Payment</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body {
+  background: linear-gradient(135deg,rgb(55, 70, 150), #003d99);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: system-ui, -apple-system;
+}
+
+.payment-container {
+  background: #fff;
+  border-radius: 16px;
+  width: 420px;
+  padding: 25px;
+  box-shadow: 0 15px 40px rgba(0,0,0,.3);
+}
+
+.bank-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.bank-logo-title {
+  font-weight: 700;
+  font-size: 18px;
+  color: #0d6efd;
+}
+
+.secure-badge {
+  font-size: 13px;
+  color: green;
+  font-weight: 600;
+}
+
+.card-preview {
+  background: linear-gradient(135deg,#1c1c1c,#434343);
+  color: white;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.card-brand {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-weight: bold;
+}
+
+.card-number {
+  font-size: 18px;
+  letter-spacing: 2px;
+  margin: 25px 0;
+}
+
+.card-name,
+.card-expiry {
+  font-size: 14px;
+  opacity: .9;
+}
+
+.form-control {
+  height: 45px;
+}
+
+.pay-btn {
+  height: 48px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.trust-text {
+  font-size: 12px;
+  color: #6c757d;
+  text-align: center;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="payment-container">
+
+  <!-- Header -->
+  <div class="bank-header">
+    <div class="bank-logo-title">MyBank Secure</div>
+    <div class="secure-badge">🔒 3D Secure</div>
+  </div>
+
+  <!-- Bank Logo -->
+  <div class="d-flex align-items-center mb-2">
+    <img id="bankLogo" style="height:32px;display:none;">
+    <span id="bankName" class="ms-2 fw-semibold"></span>
+  </div>
+
+  <!-- Card Preview -->
+  <div class="card-preview">
+    <div class="card-brand" id="brand"></div>
+    <div class="card-number" id="cardPreview">•••• •••• •••• ••••</div>
+    <div class="d-flex justify-content-between">
+      <div class="card-name" id="namePreview">AD SOYAD</div>
+      <div class="card-expiry" id="expiryPreview">MM/YY</div>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <input id="name" class="form-control mb-2" placeholder="Kart Üzerindeki İsim">
+
+  <input id="card" class="form-control mb-1" placeholder="Kart Numarası">
+  <div class="invalid-feedback">Geçersiz kart numarası</div>
+
+  <div class="row mb-2">
+    <div class="col-6">
+      <input id="expiry" class="form-control" placeholder="MM/YY">
+    </div>
+    <div class="col-6">
+      <input id="cvv" class="form-control" placeholder="CVV">
+    </div>
+  </div>
+
+  <input id="amount" class="form-control mb-3" placeholder="Tutar">
+
+  <button class="btn btn-primary w-100 pay-btn" onclick="pay()">
+    Ödemeyi Güvenle Tamamla
+  </button>
+
+  <div id="result" class="text-center fw-bold mt-3"></div>
+
+  <div class="trust-text">
+    Kart bilgileriniz 3D Secure ile korunmaktadır.
+  </div>
+
+</div>
+
+<script>
+/* ========= BANKALAR ========= */
+const banks = [
+  { name: "Ziraat Bankası", bins: ["435508","435509"], logo: "https://upload.wikimedia.org/wikipedia/commons/8/86/Ziraat_Bankasi_logo.svg" },
+  { name: "İş Bankası", bins: ["418342","418343"], logo: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Isbankasi_logo.svg" },
+  { name: "Garanti BBVA", bins: ["454671","454672"], logo: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Garanti_BBVA_logo.svg" },
+  { name: "Akbank", bins: ["557113","557114"], logo: "https://upload.wikimedia.org/wikipedia/commons/5/5a/Akbank_logo.svg" },
+  { name: "Yapı Kredi", bins: ["450634","450635"], logo: "https://upload.wikimedia.org/wikipedia/commons/3/3a/Yapi_Kredi_logo.svg" },
+  { name: "Halkbank", bins: ["979203"], logo: "https://upload.wikimedia.org/wikipedia/commons/0/0d/Halkbank_logo.svg" },
+  { name: "VakıfBank", bins: ["403280"], logo: "https://upload.wikimedia.org/wikipedia/commons/7/7d/VakifBank_logo.svg" },
+  { name: "DenizBank", bins: ["460345"], logo: "https://upload.wikimedia.org/wikipedia/commons/9/9a/DenizBank_logo.svg" },
+  { name: "QNB Finansbank", bins: ["525864"], logo: "https://upload.wikimedia.org/wikipedia/commons/3/3a/QNB_Finansbank_logo.svg" },
+  { name: "TEB", bins: ["540122"], logo: "https://upload.wikimedia.org/wikipedia/commons/5/5e/TEB_logo.svg" },
+  { name: "ING", bins: ["552096"], logo: "https://upload.wikimedia.org/wikipedia/commons/5/55/ING_Group_logo.svg" },
+  { name: "Kuveyt Türk", bins: ["979200"], logo: "https://upload.wikimedia.org/wikipedia/commons/7/75/Kuveyt_Turk_logo.svg" },
+  { name: "Albaraka Türk", bins: ["979226"], logo: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Albaraka_Turk_logo.svg" },
+  { name: "Türkiye Finans", bins: ["979206"], logo: "https://upload.wikimedia.org/wikipedia/commons/0/0e/Turkiye_Finans_logo.svg" }
+];
+
+function findBank(cardNumber) {
+  if (!cardNumber || cardNumber.length < 6) return null;
+  const bin = cardNumber.substring(0, 6);
+  return banks.find(b => b.bins.some(x => bin.startsWith(x)));
+}
+
+/* ========= LUHN ========= */
+function luhnCheck(cardNumber) {
+  let sum = 0;
+  let alt = false;
+  cardNumber = cardNumber.replace(/\s+/g,"");
+
+  for (let i = cardNumber.length - 1; i >= 0; i--) {
+    let n = parseInt(cardNumber[i]);
+    if (alt) { n *= 2; if (n > 9) n -= 9; }
+    sum += n;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+/* ========= AUTH ========= */
+let token = "";
+fetch("http://localhost:8080/api/login", { method: "POST" })
+  .then(r => r.json())
+  .then(d => token = d.token);
+
+/* ========= UI ========= */
+card.addEventListener("input", () => {
+  const raw = card.value.replace(/\s+/g,"");
+
+  cardPreview.innerText = raw
+    ? raw.replace(/\d{4}(?=.)/g, "$& ")
+    : "•••• •••• •••• ••••";
+
+  if (raw.startsWith("4")) brand.innerText = "VISA";
+  else if (raw.startsWith("5")) brand.innerText = "MASTERCARD";
+  else if (raw.startsWith("3")) brand.innerText = "AMEX";
+  else brand.innerText = "";
+
+  const bank = findBank(raw);
+  if (bank) {
+    bankLogo.src = bank.logo;
+    bankLogo.style.display = "block";
+    bankName.innerText = bank.name;
+  } else {
+    bankLogo.style.display = "none";
+    bankName.innerText = "";
+  }
+
+  // LUHN UX
+  if (raw.length >= 13) {
+    if (luhnCheck(raw)) {
+      card.classList.add("is-valid");
+      card.classList.remove("is-invalid");
+    } else {
+      card.classList.add("is-invalid");
+      card.classList.remove("is-valid");
+    }
+  } else {
+    card.classList.remove("is-valid","is-invalid");
+  }
+});
+
+name.addEventListener("input", () => namePreview.innerText = name.value.toUpperCase() || "AD SOYAD");
+expiry.addEventListener("input", () => expiryPreview.innerText = expiry.value || "MM/YY");
+
+/* ========= PAYMENT + 3D ========= */
+function pay() {
+  if (!luhnCheck(card.value)) {
+    result.innerText = "❌ Kart numarası geçersiz";
+    return;
+  }
+
+  fetch("http://localhost:8080/api/pay", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    body: JSON.stringify({
+      cardNumber: card.value,
+      amount: amount.value
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.status === "3D_SECURE_REQUIRED") {
+      window.location = "/3d-secure.html";
+    } else {
+      result.innerText = d.status;
+    }
+  });
+}
+</script>
+
+</body>
+</html>
+
